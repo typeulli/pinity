@@ -1,10 +1,11 @@
 from abc import ABCMeta, abstractmethod
 from enum import Enum
 import time
-from typing import Any, TypeVar
+from typing import Annotated, Any, TypeVar
 from pathlib import Path
 import cv2
 import numpy as np
+from numpy.typing import NDArray
 import pygame
 
 
@@ -13,8 +14,8 @@ class _Asset:
         self.path = path
     def loadImage(self, path: str) -> cv2.typing.MatLike:
         return cv2.imdecode(np.fromfile(str(self.path / path), dtype=np.uint8), cv2.IMREAD_COLOR)
-    def rectImage(self, width: int, height: int, color: tuple[int, int, int] = (0, 0, 0)) -> cv2.typing.MatLike:
-        mat = np.zeros((height, width, 3), dtype=np.uint8)
+    def rectImage(self, width: int, height: int, color: tuple[int, int, int, int] = (255, 255, 255, 255)) -> cv2.typing.MatLike:
+        mat = np.zeros((height, width, 4), dtype=np.uint8)
         mat[:, :] = color
         return mat
 Asset = _Asset(Path(__file__).parent.resolve())
@@ -27,12 +28,18 @@ class Vector3:
         self.y = y
         self.z = z
     
+    def asNumpy(self) -> Annotated[NDArray[np.float64], (2,)]:
+        return np.array([self.x, self.y], dtype=np.float64)
     def __add__(self, other: "Vector3") -> "Vector3":
         return Vector3(self.x + other.x, self.y + other.y, self.z + other.z)
     def __sub__(self, other: "Vector3") -> "Vector3":
         return Vector3(self.x - other.x, self.y - other.y, self.z - other.z)
     def __mul__(self, scalar: float) -> "Vector3":
         return Vector3(self.x * scalar, self.y * scalar, self.z * scalar)
+    def __truediv__(self, scalar: float) -> "Vector3":
+        if scalar == 0:
+            raise ZeroDivisionError("Division by zero")
+        return Vector3(self.x / scalar, self.y / scalar, self.z / scalar)
     def __neg__(self) -> "Vector3":
         return Vector3(-self.x, -self.y, -self.z)
     def __str__(self):

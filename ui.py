@@ -17,6 +17,33 @@ class Test(engine.Behaviour):
     def fixedUpdate(self) -> None:
         self.gameObject.transform.position += engine.Vector3.right() * engine.Time.deltaTime * 100
 
+class TestFollowMouse(engine.Behaviour):
+    def update(self) -> None:
+        self.gameObject.transform.position = self.gameObject.transform.scene.screenToWorld(engine.Input.getMousePosition())
+
+class VisuallizeCollider(engine.Behaviour):
+    def __init__(self, gameObject: "engine.GameObject"):
+        super().__init__(gameObject)
+        self.collider: renderer.Collider | None = None
+        self.sprite: renderer.SpriteRenderer = self.gameObject.addComponent(renderer.SpriteRenderer)
+        
+    def update(self) -> None:
+        if self.collider is None and self.gameObject.hasComponent(renderer.Collider):
+            self.collider = self.gameObject.getComponent(renderer.Collider)
+        if self.collider is None: return
+        contour = self.collider.contour
+        if contour is None: return
+        
+        #find x range, y range
+        contour = np.array(contour)
+        min_x, min_y = contour.min(axis=0)
+        max_x, max_y = contour.max(axis=0)
+        canvas = np.zeros((int(max_y - min_y), int(max_x - min_x), 4), dtype=np.uint8)
+        cv2.polylines(canvas, [contour - [min_x, min_y]], True, (0, 255, 0, 255) if self.collider.check() else (0, 0, 255, 255), 2)
+
+        self.sprite.delta = engine.Vector3(min_x, min_y, 0)
+        self.sprite.image = canvas
+        
 class Button(engine.Behaviour):
     def __init__(self, gameObject: "engine.GameObject"):
         super().__init__(gameObject)
@@ -72,14 +99,16 @@ class Entry(engine.Behaviour):
 if __name__ == "__main__":
     camera = engine.GameObject("camera")
     camera.addComponent(renderer.Camera)
-
-    btn1 = engine.GameObject("btn1")
-    btn1.addComponent(renderer.SpriteRenderer).image = engine.Asset.rectImage(200, 50, (0, 255, 0))
-    btn1.addComponent(Button).onClick = lambda: print("btn1 clicked")
-    btn1.transform.position = engine.Vector3(100, 100, 0)
-
-    ent1 = engine.GameObject("ent1")
-    ent1.addComponent(renderer.SpriteRenderer).image = engine.Asset.rectImage(200, 50, (255, 0, 0))
-    ent1.addComponent(Entry)
+    
+    coll1 = engine.GameObject("coll1")
+    collider1 = coll1.addComponent(renderer.Collider)
+    collider1.contour = np.array([[-50, -50], [50, -50], [50, 50], [-50, 50]])
+    coll1.addComponent(VisuallizeCollider).collider = collider1
+    
+    coll2 = engine.GameObject("coll2")
+    collider2 = coll2.addComponent(renderer.Collider)
+    collider2.contour = np.array([[50, 0], [0, -50], [-50, 0], [0, 50]])
+    coll2.addComponent(VisuallizeCollider).collider = collider2
+    coll2.addComponent(TestFollowMouse)
 
     renderer.start()
