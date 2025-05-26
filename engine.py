@@ -116,15 +116,20 @@ class Scene:
         self.surface: pygame.Surface | None = None
     
     def screenToView(self, pos: Vector3) -> Vector3:
+        """
+        Converts screen coordinates to view coordinates.
+        :param pos: The screen coordinates to convert.
+        :return: The converted view coordinates.
+        """
         if self.surface:
             x = pos.x - (self.surface.get_size()[0] >> 1)
-            y = pos.y - (self.surface.get_size()[1] >> 1)
+            y = -pos.y + (self.surface.get_size()[1] >> 1)
             return Vector3(x, y, pos.z)
         raise AttributeError("Scene surface is not set.")
     def viewToScreen(self, pos: Vector3) -> Vector3:
         if self.surface:
             x = pos.x + (self.surface.get_size()[0] >> 1)
-            y = pos.y + (self.surface.get_size()[1] >> 1)
+            y = -pos.y + (self.surface.get_size()[1] >> 1)
             return Vector3(x, y, pos.z)
         raise AttributeError("Scene surface is not set.")
     def screenToWorld(self, pos: Vector3) -> Vector3:

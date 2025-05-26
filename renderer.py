@@ -1,7 +1,5 @@
-from typing import Annotated
 import cv2
 import numpy as np
-from numpy.typing import NDArray
 import engine
 import pygame
 
@@ -55,7 +53,7 @@ class Camera(engine.Component, engine.ScreenView):
     def worldToScreen(self, pos: engine.Vector3) -> engine.Vector3:
         return self.gameObject.transform.scene.viewToScreen(pos - self.gameObject.transform.position)
     def screenToWorld(self, pos: engine.Vector3) -> engine.Vector3:
-        return self.gameObject.transform.scene.screenToView(pos) + self.gameObject.transform.position
+        return self.gameObject.transform.scene.screenToView(pos + self.gameObject.transform.position)
         
     def render(self, surface: pygame.Surface, components: list[engine.Component]) -> None:
         if [*surface.get_size()] != [*self.view.shape[:2][::-1]]:
@@ -70,10 +68,19 @@ class Camera(engine.Component, engine.ScreenView):
             if isinstance(obj, engine.Drawable):
                 obj.draw()
     
-        surface.blit(pygame.surfarray.make_surface(np.transpose(cv2.cvtColor(self.view, cv2.COLOR_BGRA2RGB), (1, 0, 2))), (0, 0)) # type: ignore
+        surface.blit(
+            pygame.surfarray.make_surface( # type: ignore
+                np.transpose(
+                    cv2.cvtColor(self.view, cv2.COLOR_BGRA2RGB),
+                    (1, 0, 2)
+                )
+            ),
+            (0, 0)
+        )
     def show(self, image: cv2.typing.MatLike, pos: engine.Vector3) -> None:
         size_image = image.shape[:2]
         size_view = self.view.shape[:2]
+        
         
         pos = self.worldToScreen(pos) - engine.Vector3(size_image[1] / 2, size_image[0] / 2, 0)
         
@@ -108,57 +115,27 @@ class Camera(engine.Component, engine.ScreenView):
         ).astype(np.uint8)
         
 
-ColliderContour = Annotated[NDArray[np.float64], (None, 2)]
-class Collider(engine.Component):
-    def __init__(self, gameObject: engine.GameObject) -> None:
+
+class Debugger(engine.Component, engine.Drawable):
+    def __init__(self, gameObject: engine.GameObject):
         super().__init__(gameObject)
-        self.contour: ColliderContour | None = None
-
-    def check(self) -> bool:
-        for component in self.gameObject.transform.scene.getAllComponents():
-            if isinstance(component, Collider) and component != self:
-                if self.isTouch(component):
-                    return True
-        return False
-
-    def isTouch(self, other: "Collider") -> bool:
-        colli1 = self.contour
-        colli2 = other.contour
-        if colli1 is None or colli2 is None:
-            return False
+        if not pygame.get_init():
+            pygame.init()
+        self.font = pygame.font.SysFont("Arial", 36)
+    
+    def draw(self) -> None:
+        fps = 1 / engine.Time.deltaTime
+        text = f"FPS: {fps:.2f}"
+        text_surface = self.font.render(text, True, (255, 255, 255, 255), (0, 0, 0, 0))
+        text_image: cv2.typing.MatLike = pygame.surfarray.array3d(text_surface) # type: ignore
+        text_image = cv2.cvtColor(text_image, cv2.COLOR_RGB2BGRA)
+        text_image = np.transpose(text_image, (1, 0, 2))
+        self.gameObject.transform.scene.show(
+            text_image,
+            engine.Vector3.zero()
+        )
         
-        pts1 = colli1 + self.gameObject.transform.position.asNumpy()
-        pts2 = colli2 + other.gameObject.transform.position.asNumpy()
-        
-        def project(poly: NDArray[np.float64], axis: NDArray[np.float64]) -> tuple[float, float]:
-            projs = [(p[0] * axis[0] + p[1] * axis[1]) for p in poly]
-            return min(projs), max(projs)
-
-        def overlap(minA: float, maxA: float, minB: float, maxB: float) -> bool:
-            return not (maxA < minB or maxB < minA)
-
-        all_points = [pts1, pts2]
-        for points in all_points:
-            for i in range(len(points)):
-                edge = points[(i+1) % len(points)] - points[i]
-                normal = np.array([-edge[1], edge[0]], dtype=float)
-                norm_len = np.linalg.norm(normal)
-                if norm_len == 0:
-                    continue
-                normal /= norm_len
-                minA, maxA = project(pts1, normal)
-                minB, maxB = project(pts2, normal)
-                if not overlap(minA, maxA, minB, maxB):
-                    return False
-        return True
-
-class Test(engine.Behaviour):
-    def fixedUpdate(self) -> None:
-        if engine.Input.isHold("key-100"):
-            self.gameObject.transform.position += engine.Vector3.right() * engine.Time.deltaTime * 100
-
-
-
+    
 
 
 def start():
@@ -211,26 +188,3 @@ def start():
         engine.SYSTEM.currentScene.render(surface)
         pygame.display.flip()
 
-
-if __name__ == "__main__":
-    
-    obj1 = engine.GameObject("obj1")
-    obj1.addComponent(SpriteRenderer).image = engine.Asset.rectImage(50, 50, (0, 0, 255, 128))
-    obj1.transform.position = engine.Vector3(0, 0, 0)
-    obj1.addComponent(Test)
-
-
-    obj2 = engine.GameObject("obj2", obj1.transform)
-    obj2.transform.localPosition = engine.Vector3(25, 0, 2)
-    renderer2 = obj2.addComponent(SpriteRenderer)
-    renderer2.image = engine.Asset.rectImage(50, 50, (255, 0, 0, 128))
-
-
-    obj3 = engine.GameObject("obj3", obj2.transform)
-    obj3.transform.position = engine.Vector3(12.5, 25, 1)
-    obj3.addComponent(SpriteRenderer).image = engine.Asset.rectImage(50, 50, (0, 255, 0, 128))
-
-    camera = engine.GameObject("camera")
-    camera.addComponent(Camera)
-
-    start()
