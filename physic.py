@@ -7,18 +7,33 @@ import renderer
 
 ColliderContour = Annotated[NDArray[np.float64], (None, 2)]
 class Collider(engine.Component):
+    """
+    Collider component for detecting collisions with other colliders in the scene.
+    It uses the Separating Axis Theorem (SAT) for collision detection.
+    """
     def __init__(self, gameObject: engine.GameObject) -> None:
         super().__init__(gameObject)
         self.contour: ColliderContour | None = None
+        self.isTrigger: bool = False
 
     def check(self) -> bool:
+        """
+        Check if this collider is touching any other non-trigger colliders in the scene.
+        :return: True if touching any collider, False otherwise.
+        """
         for component in self.gameObject.transform.scene.getAllComponents():
-            if isinstance(component, Collider) and component != self:
+            if isinstance(component, Collider) and component != self and not component.isTrigger:
                 if self.isTouch(component):
                     return True
         return False
 
     def isTouch(self, other: "Collider") -> bool:
+        """
+        Check if this collider is touching another collider.
+        Uses the Separating Axis Theorem (SAT) for collision detection.
+        :param other: The other collider to check for collision.
+        :return: True if colliding, False otherwise.
+        """
         colli1 = self.contour
         colli2 = other.contour
         if colli1 is None or colli2 is None:
@@ -55,7 +70,7 @@ class VisuallizeCollider(engine.Behaviour):
         self.collider: Collider | None = None
         self.sprite: renderer.SpriteRenderer = self.gameObject.addComponent(renderer.SpriteRenderer)
         
-    def update(self) -> None:
+    def fixedUpdate(self) -> None:
         if self.collider is None and self.gameObject.hasComponent(Collider):
             self.collider = self.gameObject.getComponent(Collider)
         if self.collider is None: return

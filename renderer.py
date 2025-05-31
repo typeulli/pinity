@@ -3,8 +3,6 @@ import numpy as np
 import engine
 import pygame
 
-from pathlib import Path
-path_here = Path(__file__).parent.resolve()
 
 
 screen = np.zeros((512, 1024, 3), dtype=np.uint8)
@@ -29,7 +27,7 @@ class SpriteRenderer(engine.Component, engine.Drawable):
             return
         width = self.image.shape[1]
         height = self.image.shape[0]
-        self.gameObject.transform.scene.show(self.image, self.gameObject.transform.position + self.delta + engine.Vector3(width, height, 0) / 2)
+        self.gameObject.transform.scene.show(self.image, self.gameObject.transform.position + self.delta + engine.Vector3(-width, height, 0) / 2)
         
         
         
@@ -82,7 +80,7 @@ class Camera(engine.Component, engine.ScreenView):
         size_view = self.view.shape[:2]
         
         
-        pos = self.worldToScreen(pos) - engine.Vector3(size_image[1] / 2, size_image[0] / 2, 0)
+        pos = self.worldToScreen(pos)
         
         
         xleft = clamp(pos.x, 0, size_view[1])
@@ -185,6 +183,6 @@ def start():
         engine.SYSTEM.currentScene.update()
         if dofixed:
             engine.SYSTEM.currentScene.fixedUpdate()
-        engine.SYSTEM.currentScene.render(surface)
+            engine.SYSTEM.currentScene.render(surface)
         pygame.display.flip()
 

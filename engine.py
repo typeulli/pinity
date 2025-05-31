@@ -10,25 +10,74 @@ import pygame
 
 
 class _Asset:
+    """
+    A utility class for managing and processing image assets.
+    """
     def __init__(self, path: Path):
+        """
+        Initializes the Asset manager with a given path.
+        :param path: The directory path where assets are stored.
+        """
         self.path = path
     def loadImage(self, path: str) -> cv2.typing.MatLike:
-        return cv2.imdecode(np.fromfile(str(self.path / path), dtype=np.uint8), cv2.IMREAD_COLOR)
+        """
+        Loads an image from the specified path.
+        :param path: The relative path to the image file.
+        :return: The loaded image as a numpy array.
+        """
+        image = cv2.imdecode(np.fromfile(str(self.path / path), dtype=np.uint8), cv2.IMREAD_COLOR | cv2.IMREAD_UNCHANGED)
+        if image.shape[2] == 3:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
+        return image
     def rectImage(self, width: int, height: int, color: tuple[int, int, int, int] = (255, 255, 255, 255)) -> cv2.typing.MatLike:
+        """
+        Creates a solid color rectangle image.
+        :param width: The width of the rectangle.
+        :param height: The height of the rectangle.
+        :param color: The color of the rectangle in RGBA format.
+        :return: A numpy array representing the rectangle image.
+        """
         mat = np.zeros((height, width, 4), dtype=np.uint8)
         mat[:, :] = color
         return mat
+    def splitTileMap(self, image: cv2.typing.MatLike, tileWidth: int = 32, tileHeight: int = 32, gapX: int = 0, gapY: int = 0, offsetX: int = 0, offsetY: int = 0) -> list[list[cv2.typing.MatLike]]:
+        """
+        Splits a tile map image into smaller tiles.
+        :param image: The tile map image to split.
+        :param tileWidth: The width of each tile.
+        :param tileHeight: The height of each tile.
+        :param gapX: The horizontal gap between tiles.
+        :param gapY: The vertical gap between tiles.
+        :param offsetX: The horizontal offset to start splitting.
+        :param offsetY: The vertical offset to start splitting.
+        :return: A list of lists containing the split tiles.
+        """
+        tiles: list[list[cv2.typing.MatLike]] = []
+        for y in range(offsetY, image.shape[0], tileHeight + gapY):
+            tiles.append([
+                image[y:y + tileHeight, x:x + tileWidth] for x in range(offsetX, image.shape[1], tileWidth + gapX)
+            ])
+        return tiles
 Asset = _Asset(Path(__file__).parent.resolve())
 
 
 
 class Vector3:
     def __init__(self, x: float, y: float, z: float=0):
+        """
+        Initializes a 3D vector with x, y, and z coordinates.
+        :param x: The x coordinate of the vector.
+        :param y: The y coordinate of the vector.
+        :param z: The z coordinate of the vector (default is 0).
+        """
         self.x = x
         self.y = y
         self.z = z
     
     def asNumpy(self) -> Annotated[NDArray[np.float64], (2,)]:
+        """
+        Converts the vector to a numpy array with shape (2,).
+        """
         return np.array([self.x, self.y], dtype=np.float64)
     def __add__(self, other: "Vector3") -> "Vector3":
         return Vector3(self.x + other.x, self.y + other.y, self.z + other.z)
@@ -51,6 +100,9 @@ class Vector3:
     
     @property
     def normalized(self) -> "Vector3":
+        """
+        Returns a normalized version of the vector.
+        """
         length = (self.x**2 + self.y**2) ** 0.5
         if length == 0:
             return Vector3(0, 0, 0)
@@ -72,6 +124,12 @@ class Vector3:
     
 class Positionable:
     def __init__(self, position: Vector3 | None = None, rotation: float | None = None, scale: Vector3 | None = None):
+        """
+        Initializes a Positionable object with local position, rotation, and scale.
+        :param position: The local position of the object (default is Vector3.zero()).
+        :param rotation: The local rotation of the object in degrees (default is 0.0).
+        :param scale: The local scale of the object (default is Vector3.one()).
+        """
         self.localPosition = position if position else Vector3.zero()
         self.rotation = rotation if rotation else 0.0
         self.scale = scale if scale else Vector3.one()
@@ -96,6 +154,9 @@ class Positionable:
         return self._children
 class SceneTransform(Positionable):
     def __init__(self, scene: "Scene"):
+        """
+        Initializes a SceneTransform object that represents the root transform of a Scene.
+        """
         super().__init__()
         self._scene = scene
     
@@ -111,6 +172,9 @@ class SceneTransform(Positionable):
         raise AttributeError("Cannot set position of SceneTransform.")
 class Scene:
     def __init__(self): 
+        """
+        Initializes a Scene object with a root transform and a view.
+        """
         self.transform = SceneTransform(self)
         self.view: ScreenView | None = None
         self.surface: pygame.Surface | None = None
@@ -127,38 +191,79 @@ class Scene:
             return Vector3(x, y, pos.z)
         raise AttributeError("Scene surface is not set.")
     def viewToScreen(self, pos: Vector3) -> Vector3:
+        """
+        Converts view coordinates to screen coordinates.
+        :param pos: The view coordinates to convert.
+        :return: The converted screen coordinates.
+        """
         if self.surface:
             x = pos.x + (self.surface.get_size()[0] >> 1)
             y = -pos.y + (self.surface.get_size()[1] >> 1)
             return Vector3(x, y, pos.z)
         raise AttributeError("Scene surface is not set.")
     def screenToWorld(self, pos: Vector3) -> Vector3:
+        """
+        Converts screen coordinates to world coordinates.
+        :param pos: The screen coordinates to convert.
+        :return: The converted world coordinates.
+        """
         if self.view:
             return self.view.screenToWorld(pos)
         raise AttributeError("Scene view is not set.")
     def worldToScreen(self, pos: Vector3) -> Vector3:
+        """
+        Converts world coordinates to screen coordinates.
+        :param pos: The world coordinates to convert.
+        :return: The converted screen coordinates.
+        """
         if self.view:
             return self.view.worldToScreen(pos)
         raise AttributeError("Scene view is not set.")
     def worldToView(self, pos: Vector3) -> Vector3:
+        """
+        Converts world coordinates to view coordinates.
+        :param pos: The world coordinates to convert.
+        :return: The converted view coordinates.
+        """
         if self.view:
             return self.view.worldToView(pos)
         raise AttributeError("Scene view is not set.")
     def viewToWorld(self, pos: Vector3) -> Vector3:
+        """
+        Converts view coordinates to world coordinates.
+        :param pos: The view coordinates to convert.
+        :return: The converted world coordinates.
+        """
         if self.view:
             return self.view.viewToWorld(pos)
         raise AttributeError("Scene view is not set.")
     
     
     def show(self, image: cv2.typing.MatLike, pos: Vector3) -> None:
+        """
+        Displays an image at a specified position in the scene.
+        :param image: The image to display.
+        :param pos: The position in world coordinates where the image should be displayed.
+        :return: None
+        """
         if self.view:
             self.view.show(image, pos)
         else:
             print("WARN : No view set for scene.")
     def render(self, surface: pygame.Surface) -> None:
+        """
+        Renders the scene to a specified surface.
+        :param surface: The pygame surface to render the scene onto.
+        :return: None
+        """
         if self.view:
             self.view.render(surface, self.getAllComponents())
     def getAllComponents(self) -> list["Component"]:
+        """
+        Collects all components in the scene, sorted by their defined order in SYSTEM.orders.
+        :return: A list of all components in the scene, sorted by their order.
+        """
+        
         components: dict[type[Component], list[Component]] = {key: [] for key in SYSTEM.orders.keys()}
         
         
@@ -179,12 +284,21 @@ class Scene:
         
         return results
     def start(self) -> None:
+        """
+        Starts all components in the scene.
+        """
         for component in self.getAllComponents():
             component.start()
     def update(self) -> None:
+        """
+        Updates all components in the scene.
+        """
         for component in self.getAllComponents():
             component.update()
     def fixedUpdate(self) -> None:
+        """
+        Fixed update for all components in the scene.
+        """
         for component in self.getAllComponents():
             component.fixedUpdate()
     
