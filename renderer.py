@@ -23,6 +23,9 @@ class SpriteRenderer(engine.Component, engine.Drawable):
         self.image: cv2.typing.MatLike | None = None
         self.delta: engine.Vector3 = engine.Vector3(0, 0, 0)
     def draw(self) -> None:
+        """
+        Draw the sprite on the screen.
+        """
         if self.image is None:
             return
         width = self.image.shape[1]
@@ -45,12 +48,32 @@ class Camera(engine.Component, engine.ScreenView):
         engine.SYSTEM.currentScene.view = self
     
     def worldToView(self, pos: engine.Vector3) -> engine.Vector3:
+        """
+        Convert a world position to a view position.
+        :param pos: The world position to convert.
+        :return: The converted view position.
+        """
         return pos - self.gameObject.transform.position
     def viewToWorld(self, pos: engine.Vector3) -> engine.Vector3:
+        """
+        Convert a view position to a world position.
+        :param pos: The view position to convert.
+        :return: The converted world position.
+        """
         return pos + self.gameObject.transform.position
     def worldToScreen(self, pos: engine.Vector3) -> engine.Vector3:
+        """
+        Convert a world position to a screen position.
+        :param pos: The world position to convert.
+        :return: The converted screen position.
+        """
         return self.gameObject.transform.scene.viewToScreen(pos - self.gameObject.transform.position)
     def screenToWorld(self, pos: engine.Vector3) -> engine.Vector3:
+        """
+        Convert a screen position to a world position.
+        :param pos: The screen position to convert.
+        :return: The converted world position.
+        """
         return self.gameObject.transform.scene.screenToView(pos + self.gameObject.transform.position)
         
     def render(self, surface: pygame.Surface, components: list[engine.Component]) -> None:

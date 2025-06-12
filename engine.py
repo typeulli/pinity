@@ -301,7 +301,7 @@ class Scene:
         """
         for component in self.getAllComponents():
             component.fixedUpdate()
-    
+
 class _Time:
     def __init__(self):
         self.__lastUpdate = 0.0
@@ -312,7 +312,7 @@ class _Time:
     
     
     @property
-    def deltaTime(self) -> float:
+    def deltaTime(self) -> float: 
         return self.__deltaTime
     @property
     def lastUpdate(self) -> float:

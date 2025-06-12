@@ -71,6 +71,10 @@ class VisuallizeCollider(engine.Behaviour):
         self.sprite: renderer.SpriteRenderer = self.gameObject.addComponent(renderer.SpriteRenderer)
         
     def fixedUpdate(self) -> None:
+        """
+        Update the visual representation of the collider by drawing its contour.
+        This method should be called every fixed update to ensure the collider's contour is visualized correctly.
+        """
         if self.collider is None and self.gameObject.hasComponent(Collider):
             self.collider = self.gameObject.getComponent(Collider)
         if self.collider is None: return
@@ -99,9 +103,17 @@ class Rigidbody(engine.Component):
             self.collider = self.gameObject.getComponent(Collider)
 
     def applyForce(self, force: engine.Vector3) -> None:
+        """
+        Apply a force to the rigidbody, affecting its acceleration.
+        :param force: The force vector to apply.
+        """
         self.acceleration += force / self.mass
 
     def update(self) -> None:
+        """
+        Update the rigidbody's position and velocity based on its acceleration.
+        This method should be called every frame to update the physics state.
+        """
         if self.collider is not None and self.collider.check():
             if not self._isGrounded:
                 self.velocity = engine.Vector3(0, 0, 0)  # Reset velocity on ground contact

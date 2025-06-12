@@ -2,7 +2,7 @@
 import sys
 from pathlib import Path
 path_here = Path(__file__).parent.resolve()
-sys.path.append(str(path_here.parent.absolute()))
+sys.path.append(str(path_here.parent.parent.absolute()))
 from engine import *
 from renderer import *
 from physic import *
