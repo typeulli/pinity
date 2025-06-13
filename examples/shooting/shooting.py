@@ -1,10 +1,11 @@
 import sys
 from pathlib import Path
 path_here = Path(__file__).parent.resolve()
-sys.path.append(str(path_here.parent.absolute()))
+sys.path.append(str(path_here.parent.parent.absolute()))
 from engine import *
 from renderer import *
 from physic import *
+from ui import *
 
 camera = GameObject("camera")
 camera.addComponent(Camera)
@@ -20,10 +21,17 @@ class BulletScript(Behaviour):
         self.collider.contour = np.array([[-5, -5], [5, -5], [5, 5], [-5, 5]])
 
     def update(self) -> None:
-        if self.collider.check():
+        global kill_count
+        colli_target = self.collider.check()
+        if colli_target:
             self.renderer.image = None
             self.body.velocity = Vector3(0, 0, 0)
-    
+            self.collider.contour = None
+            
+            colli_target.contour = None
+            colli_target.gameObject.getComponent(SpriteRenderer).image = None
+            
+            kill_count += 1
 
 
 class PlayerScript(Behaviour):
@@ -58,7 +66,7 @@ class PlayerScript(Behaviour):
 
 player = GameObject("player")
 player.transform.position = Vector3(0, -200, 0)
-player.addComponent(SpriteRenderer).image = Asset.rectImage(50, 50, (255, 0, 0, 128))
+player.addComponent(SpriteRenderer).image = cv2.resize(Asset.loadImage(str(path_here / "assets" / "friendly_spaceship.png")), (50, 50))
 player.addComponent(PlayerScript)
 
 
@@ -68,12 +76,7 @@ class EnemyScript(Behaviour):
         self.collider: Collider = self.gameObject.addComponent(Collider)
         self.collider.contour = np.array([[-25, -25], [25, -25], [25, 25], [-25, 25]])
         self.renderer: SpriteRenderer = self.gameObject.addComponent(SpriteRenderer)
-        self.renderer.image = Asset.rectImage(50, 50, (0, 0, 255, 128))
-    def update(self) -> None:
-        if self.collider.check():
-            self.renderer.image = None
-            self.collider.contour = None
-            
+        self.renderer.image = cv2.resize(Asset.loadImage(str(path_here / "assets" / "enemy_spaceship.png")), (50, 50))
 
 for i in range(5):
     for j in range(4 - i):
@@ -82,5 +85,19 @@ for i in range(5):
         y_offset = i * -60  # Adjust vertical spacing
         enemy.transform.position = Vector3(x_offset, y_offset, 0) + Vector3(0, 200, 0)
         enemy.addComponent(EnemyScript)
+        
+kill_count = 0
 
+class KillCounter(engine.Behaviour):
+    def __init__(self, gameObject: GameObject):
+        super().__init__(gameObject)
+        self.text = self.gameObject.addComponent(Entry)
+        self.text.font_color = (255, 255, 255, 255)
+        self.text.background_color = (0, 0, 0, 255)
+    def update(self) -> None:
+        self.text.text = f"Kills: {kill_count}"
+kill_counter = GameObject("kill_counter")
+kill_counter.transform.position = Vector3(-150, 200, 0)
+kill_counter.addComponent(SpriteRenderer)
+kill_counter.addComponent(KillCounter)
 start()

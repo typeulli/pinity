@@ -24,6 +24,7 @@ class PlayerScript(Behaviour):
         self.dt = .0
         self.renderer: SpriteRenderer = self.gameObject.addComponent(SpriteRenderer)
         self.body: Rigidbody = self.gameObject.addComponent(Rigidbody)
+        self.gameObject.addComponent(VisuallizeCollider)
         self.body.mass = 1.0
         self.body.acceleration = engine.Vector3(0, -100, 0)
 
@@ -132,8 +133,8 @@ class CoinScript(Behaviour):
         self.dt = .0
         self.renderer: SpriteRenderer = self.gameObject.addComponent(SpriteRenderer)
         self.collider: Collider = self.gameObject.addComponent(Collider)
-        self.collider.isTrigger = True
         self.collider.contour = np.array([[-32, -32], [32, -32], [32, 32], [-32, 32]])
+        self.collider.isTrigger = True
         self.exist = True
     def update(self) -> None:
         if not self.exist: return
@@ -143,6 +144,7 @@ class CoinScript(Behaviour):
             self.mode = (self.mode + 1) % len(image_coin_grid)
         self.renderer.image = image_coin_grid[self.mode]
         if self.collider.isTouch(player.getComponent(Collider)):
+            self.collider.contour = None
             self.renderer.image = None
             self.exist = False
 coin1 = GameObject("coin1")

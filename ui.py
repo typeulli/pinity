@@ -5,8 +5,6 @@ import engine
 import pygame
 import renderer
 
-from pathlib import Path
-path_here = Path(__file__).parent.resolve()
 
 
 
@@ -41,9 +39,10 @@ class Entry(engine.Behaviour):
         super().__init__(gameObject)
         self.focused = False
         self.text = "Entry"  # 초기 텍스트
-        self.font_color = (0, 0, 0)
-        self.font_scale = 1
-        self.thickness = 2
+        self.font_color: tuple[int, int, int, int] = (0, 0, 0, 255)
+        self.background_color: tuple[int, int, int, int] = (255, 255, 255, 255)
+        self.font_scale: float = 1
+        self.thickness: int = 2
 
     def update(self) -> None:
         # 마우스 클릭으로 포커스 판단
@@ -59,7 +58,8 @@ class Entry(engine.Behaviour):
         # 텍스트 이미지 만들기
         spriteRenderer = self.gameObject.getComponent(renderer.SpriteRenderer)
         if spriteRenderer:
-            img = np.ones((50, 200, 3), dtype=np.uint8) * 255
+            img = np.ones((50, 200, 4), dtype=np.uint8) * 255
+            img[:, :] = self.background_color
             display_text = self.text + ("|" if self.focused else "")
             cv2.putText(img, display_text, (5, 35), cv2.FONT_HERSHEY_SIMPLEX,
                         self.font_scale, self.font_color, self.thickness)

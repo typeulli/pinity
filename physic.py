@@ -16,16 +16,16 @@ class Collider(engine.Component):
         self.contour: ColliderContour | None = None
         self.isTrigger: bool = False
 
-    def check(self) -> bool:
+    def check(self) -> "Collider | None":
         """
         Check if this collider is touching any other non-trigger colliders in the scene.
         :return: True if touching any collider, False otherwise.
         """
         for component in self.gameObject.transform.scene.getAllComponents():
-            if isinstance(component, Collider) and component != self and not component.isTrigger:
+            if isinstance(component, Collider) and component != self:
                 if self.isTouch(component):
-                    return True
-        return False
+                    return component
+        return None
 
     def isTouch(self, other: "Collider") -> bool:
         """
@@ -88,7 +88,6 @@ class VisuallizeCollider(engine.Behaviour):
         canvas = np.zeros((int(max_y - min_y), int(max_x - min_x), 4), dtype=np.uint8)
         cv2.polylines(canvas, [contour - [min_x, min_y]], True, (0, 255, 0, 255) if self.collider.check() else (0, 0, 255, 255), 2)
 
-        self.sprite.delta = engine.Vector3(min_x, min_y, 0)
         self.sprite.image = canvas
 
 class Rigidbody(engine.Component):
@@ -114,14 +113,15 @@ class Rigidbody(engine.Component):
         Update the rigidbody's position and velocity based on its acceleration.
         This method should be called every frame to update the physics state.
         """
-        if self.collider is not None and self.collider.check():
-            if not self._isGrounded:
-                self.velocity = engine.Vector3(0, 0, 0)  # Reset velocity on ground contact
-                self.acceleration = engine.Vector3(0, 0, 0)  # Reset acceleration on ground contact
+        if self.collider and not self.collider.isTrigger:
+            if self.collider.check():
+                if not self._isGrounded:
+                    self.velocity = engine.Vector3(0, 0, 0)  # Reset velocity on ground contact
+                    self.acceleration = engine.Vector3(0, 0, 0)  # Reset acceleration on ground contact
+                    self._isGrounded = True
+                    return
                 self._isGrounded = True
-                return
-            self._isGrounded = True
-        else:
-            self._isGrounded = False
+            else:
+                self._isGrounded = False
         self.gameObject.transform.position += self.velocity * engine.Time.deltaTime
         self.velocity += self.acceleration * engine.Time.deltaTime
