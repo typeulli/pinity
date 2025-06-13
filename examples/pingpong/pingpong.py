@@ -52,7 +52,7 @@ board2 = GameObject("board2")
 board2.transform.position = Vector3(300, 0, 0)
 script2 = board2.addComponent(PingPongBoardScript)
 script2.keyup = "i"
-script2.keydown = "j"
+script2.keydown = "k"
 
 class BallScript(Behaviour):
     def __init__(self, gameObject: "GameObject"):
@@ -72,6 +72,10 @@ class BallScript(Behaviour):
             self.body.velocity.y = 100
         if self.gameObject.transform.position.y > 250:
             self.body.velocity.y = -100
+            
+        if Input.isDown(f"key-{ord('r')}"):
+            self.gameObject.transform.position = Vector3(0, 0, 0)
+            self.body.velocity = Vector3(200, 100, 0)
 
 ball = GameObject("ball")
 ball.addComponent(SpriteRenderer).image = Asset.rectImage(10, 10, (0, 0, 255, 255))
